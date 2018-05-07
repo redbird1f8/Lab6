@@ -12,8 +12,38 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+typedef struct StrList{
+    char adr[255];
+    StrList *beg;
+    StrList *next = NULL;
+} StrList;
+
+void ListInit(StrList* sl, char *adr)
+{
+    sl = malloc(sizeof(StrList));
+    memcpy(sl->adr, adr, strlen(adr));
+    sl->beg = sl;
+    sl->next = NULL;
+}
+
+void ListAdd(StrList* sl, char *adr)
+{
+    sl->next = malloc(sizeof(StrList));
+    memcpy(sl->next->adr, adr, strlen(adr));
+    sl->next->beg = sl->beg;
+    sl->next->next = NULL;
+}
+
+void ListDestroy(StrList* sl, char *adr)
+{
+    while(sl != NULL)
+    {
+        
+    }
+}
+
 struct Server {
-  char ip[255];
+  char ip[256];
   int port;
 };
 
@@ -48,7 +78,7 @@ bool ConvertStringToUI64(const char *str, uint64_t *val) {
 int main(int argc, char **argv) {
   uint64_t k = -1;
   uint64_t mod = -1;
-  char servers[255] = {'\0'}; // TODO: explain why 255
+  char servers[256] = {'\0'}; // TODO: explain why 256
 
   while (true) {
     int current_optind = optind ? optind : 1;
@@ -69,11 +99,19 @@ int main(int argc, char **argv) {
       switch (option_index) {
       case 0:
         ConvertStringToUI64(optarg, &k);
+        if(k <= 0)
+        {
+            return 1;
+        }
         // TODO: your code here
         break;
       case 1:
         ConvertStringToUI64(optarg, &mod);
         // TODO: your code here
+        if(k <= 1)
+        {
+            return 1;
+        }
         break;
       case 2:
         // TODO: your code here
@@ -99,12 +137,18 @@ int main(int argc, char **argv) {
   }
 
   // TODO: for one server here, rewrite with servers from file
+  char **srv;
+  srv = malloc(sizeof(**char))
+  FILE* srv_lst;
+  srv_lst = fopen(servers, "r");
+  fclose(srv_lst);
   unsigned int servers_num = 1;
   struct Server *to = malloc(sizeof(struct Server) * servers_num);
   // TODO: delete this and parallel work between servers
   to[0].port = 20001;
   memcpy(to[0].ip, "127.0.0.1", sizeof("127.0.0.1"));
-
+  
+  
   // TODO: work continiously, rewrite to make parallel
   for (int i = 0; i < servers_num; i++) {
     struct hostent *hostname = gethostbyname(to[i].ip);
