@@ -6,10 +6,10 @@
 
 #include <errno.h>
 #include <getopt.h>
-#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/socket.h>
+#include <netdb.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
@@ -21,6 +21,7 @@
 
 uint64_t k = -1;
 uint64_t mod = -1;
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct Server Server;
 struct Server {
@@ -35,16 +36,22 @@ struct ThreadArg {
 };
 
 void *ClientThread(void *args) {
+    /*pthread_mutex_lock(&mut);
     struct hostent *hostname = gethostbyname(((ThreadArg*)args)->server->ip);
+    pthread_mutex_unlock(&mut);
     if (hostname == NULL) {
         fprintf(stderr, "gethostbyname failed with %s\n", ((ThreadArg*)args)->server->ip);
         exit(1);
-    }
+    }*/
+    char port_str[6];
+    struct addrinfo **ainf = NULL;
+    sprintf(port_str, "%d", ((ThreadArg*)args)->server->port);
+    getaddrinfo(((ThreadArg*)args)->server->ip, port_str, NULL, ainf);
 
-    struct sockaddr_in server;
-    server.sin_family = AF_INET;
-    server.sin_port = htons(((ThreadArg*)args)->server->port);
-    server.sin_addr.s_addr = *((unsigned long *)hostname->h_addr);
+    struct sockaddr_in *server = &(ainf[0]);
+    //server.sin_family = AF_INET;
+    //server.sin_port = htons(((ThreadArg*)args)->server->port);
+    //server.sin_addr.s_addr = *((unsigned long *)hostname->h_addr);
 
     int sck = socket(AF_INET, SOCK_STREAM, 0);
     if (sck < 0) {
@@ -52,10 +59,11 @@ void *ClientThread(void *args) {
         exit(1);
     }
 
-    if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
+    if (connect(sck, (struct sockaddr *)server, sizeof(struct sockaddr)) < 0) {
         fprintf(stderr, "Connection failed\n");
         exit(1);
     }
+    printf("Connected!\n");
 
     // TODO: for one server
     // parallel between servers
@@ -67,7 +75,8 @@ void *ClientThread(void *args) {
         exit(1);
     }
 
-    uint64_t *response = malloc(sizeof(uint64_t));
+    //uint64_t *response = malloc(sizeof(uint64_t));
+    uint64_t response;
     if (recv(sck, &response, sizeof(response), 0) < 0) {
         fprintf(stderr, "Recieve failed\n");
         exit(1);
@@ -193,11 +202,11 @@ int main(int argc, char **argv) {
     }
 
     // TODO: for one server here, rewrite with servers from file
-    char *srv;
-    srv = malloc(sizeof(char)*262);
+    char srv[262];
+    char *stopl;
+    //srv = malloc(sizeof(char)*262);
     FILE* srv_lst;
     srv_lst = fopen(servers, "r");
-    fclose(srv_lst);
     //
     unsigned int servers_num = 0;
     Server *to = NULL;
@@ -205,6 +214,8 @@ int main(int argc, char **argv) {
     char *delim_pos = NULL;
     // TODO: delete this and parallel work between servers
     while(fgets(srv, 262, srv_lst) != NULL){
+    //do{
+   //     stopl = fgets(srv, 262, srv_lst);
         ++servers_num;
         to = realloc(to, sizeof(struct Server) * servers_num);
         delim_pos = strchr(srv, ':');
@@ -218,11 +229,10 @@ int main(int argc, char **argv) {
         to[servers_num-1].port = port;
         memcpy(to[servers_num-1].ip, srv, abs(delim_pos - srv)); 
         to[servers_num-1].ip[255] = '\0';
-    }
-
+    }//while(stopl != NULL);
+    fclose(srv_lst);
     //Arguments are being set here.
-    struct FactArgs *fargs = malloc(sizeof(struct FactArgs) * servers_num);
-    int tc = k/servers_num;
+/*    struct FactArgs *fargs = malloc(sizeof(struct FactArgs) * servers_num);
     for(int i = 0; i < servers_num; ++i)
     {
         fargs[i].mod = mod;
@@ -235,10 +245,20 @@ int main(int argc, char **argv) {
         {
             fargs[i].end = tc*(i+1);
         }
-    }
+    }*/
     ThreadArg *targs = malloc(sizeof(ThreadArg)*servers_num);
+    int tc = k/servers_num;
     for(int i = 0; i < servers_num; ++i) {
-        targs[i].args = fargs + i;
+        targs[i].args->mod = mod;
+        targs[i].args->begin = tc*i + 1;
+        if(i == servers_num - 1)
+        {
+            targs[i].args->end = tc*(i+1) + k%servers_num;
+        }
+        else
+        {
+            targs[i].args->end = tc*(i+1);
+        }
         targs[i].server = to + i;          //TODO Make it in different way!!!1
     }
     //Threads are being set here
@@ -257,8 +277,8 @@ int main(int argc, char **argv) {
         result = (result * srf) % mod;
     }
     free(to);
-    free(fargs);
     free(targs);
+    printf("Total: %llu\n", result);
 
     return 0;
 }

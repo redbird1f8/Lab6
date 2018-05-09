@@ -21,17 +21,17 @@
   };*/
 
 
-u_int64_t Factorial(const FactArgs *args) {
+/*u_int64_t Factorial(const FactArgs *args) {
     u_int64_t ans = 1;
 
     // TODO: your code here
 
     return ans;
-}
+}*/
 
 void *ThreadFactorial(void *args) {
     FactArgs *fargs = (FactArgs *)args;
-    return (void *)(u_int64_t *)Factorial(fargs);
+    return (void *)(u_int64_t *)Fact(fargs);
 }
 
 int main(int argc, char **argv) {
@@ -57,10 +57,18 @@ int main(int argc, char **argv) {
                             case 0:
                                 port = atoi(optarg);
                                 // TODO: your code here
+                                if(port <= 0)
+                                {
+                                    return 2;
+                                }
                                 break;
                             case 1:
                                 tnum = atoi(optarg);
                                 // TODO: your code here
+                                if(tnum <=0)
+                                {
+                                    return 2;
+                                }
                                 break;
                             default:
                                 printf("Index %d is out of options\n", option_index);
@@ -168,7 +176,7 @@ int main(int argc, char **argv) {
                 args[i].end = 1;
                 args[i].mod = mod;*/
 
-                if (pthread_create(&threads[i], NULL, Fact,
+                if (pthread_create(&threads[i], NULL, ThreadFactorial,
                             (void *)&args[i])) {
                     printf("Error: pthread_create failed!\n");
                     return 1;
