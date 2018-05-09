@@ -1,16 +1,20 @@
 .PHONY: clean all
-CC=gcc
+CC=gcc -g
 CFLAGS=-I.
 
 
-all : client server
+all : client server libfact
 
-client : 
-	$(CC) client.c -lpthread -o client $(CFLAGS)
+libfact :
+	$(CC) -c fact.c -o fact.o $(CFLAGS)
+	ar rcs libfact.a fact.o
 
-server :
-	$(CC) server.c -lpthread -o server $(CFLAGS)
+client : libfact
+	$(CC) client.c -lpthread -L./ -lfact -o client $(CFLAGS)
+
+server : libfact
+	$(CC) server.c -lpthread -L./ -lfact -o server $(CFLAGS)
 
 
 clean :
-	rm client server
+	rm client server fact.o libfact.a
