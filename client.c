@@ -33,36 +33,39 @@ typedef struct ThreadArg ThreadArg;
 struct ThreadArg {
     Server *server;
     FactArgs *args;
+    //u_int64_t res;
 };
 
-void *ClientThread(void *args) {
-    /*pthread_mutex_lock(&mut);
-    struct hostent *hostname = gethostbyname(((ThreadArg*)args)->server->ip);
-    pthread_mutex_unlock(&mut);
-    if (hostname == NULL) {
-        fprintf(stderr, "gethostbyname failed with %s\n", ((ThreadArg*)args)->server->ip);
-        exit(1);
-    }*/
-    char port_str[6];
-    struct addrinfo **ainf = NULL;
-    sprintf(port_str, "%d", ((ThreadArg*)args)->server->port);
-    getaddrinfo(((ThreadArg*)args)->server->ip, port_str, NULL, ainf);
+/*u_int64_t SendRec(const ThreadArg *args) {
+    u_int64_t ans = 1;
 
-    struct sockaddr_in *server = &(ainf[0]);
+    // TODO: your code here
+    printf("lol\n");
+    printf("connecting %s:%d\n", ((ThreadArg*)args)->server->ip, ((ThreadArg*)args)->server->port);
+    char port_str[20];
+    struct addrinfo *ainf = NULL;
+    sprintf(port_str, "%d", ((ThreadArg*)args)->server->port);
+    printf("got address %s:%d\n", ((ThreadArg*)args)->server->ip, ((ThreadArg*)args)->server->port);
+    getaddrinfo(((ThreadArg*)args)->server->ip, port_str, NULL, &ainf);
+    
+    //struct sockaddr_in server;
     //server.sin_family = AF_INET;
     //server.sin_port = htons(((ThreadArg*)args)->server->port);
     //server.sin_addr.s_addr = *((unsigned long *)hostname->h_addr);
 
-    int sck = socket(AF_INET, SOCK_STREAM, 0);
+    //int sck = socket(AF_INET, SOCK_STREAM, 0);
+    int sck = socket(ainf->ai_family, ainf->ai_socktype, ainf->ai_protocol);
     if (sck < 0) {
         fprintf(stderr, "Socket creation failed!\n");
         exit(1);
     }
 
-    if (connect(sck, (struct sockaddr *)server, sizeof(struct sockaddr)) < 0) {
+    //if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
+    if (connect(sck, (struct sockaddr *)(ainf->ai_addr), ainf->ai_addrlen) < 0) {
         fprintf(stderr, "Connection failed\n");
         exit(1);
     }
+    freeaddrinfo(ainf);
     printf("Connected!\n");
 
     // TODO: for one server
@@ -74,17 +77,78 @@ void *ClientThread(void *args) {
         fprintf(stderr, "Send failed\n");
         exit(1);
     }
-
+    printf("Data sent!\n");
     //uint64_t *response = malloc(sizeof(uint64_t));
-    uint64_t response;
-    if (recv(sck, &response, sizeof(response), 0) < 0) {
+    u_int64_t response;// = malloc(sizeof(u_int64_t*));
+    if (recv(sck, &response, sizeof(u_int64_t), 0) < 0) {
         fprintf(stderr, "Recieve failed\n");
         exit(1);
     }
-
+    
     close(sck);
+    printf("Data received!\n");
 
-    return (void *)response;
+    return response;
+}*/
+
+void *ClientThread(void *args) {
+    //return (void *)(u_int64_t *)SendRec(args);
+    /*pthread_mutex_lock(&mut);
+    struct hostent *hostname = gethostbyname(((ThreadArg*)args)->server->ip);
+    pthread_mutex_unlock(&mut);
+    if (hostname == NULL) {
+        fprintf(stderr, "gethostbyname failed with %s\n", ((ThreadArg*)args)->server->ip);
+        exit(1);
+    }*/
+    printf("lol\n");
+    printf("connecting %s:%d\n", ((ThreadArg*)args)->server->ip, ((ThreadArg*)args)->server->port);
+    char port_str[20];
+    struct addrinfo *ainf = NULL;
+    sprintf(port_str, "%d", ((ThreadArg*)args)->server->port);
+    printf("got address %s:%d\n", ((ThreadArg*)args)->server->ip, ((ThreadArg*)args)->server->port);
+    getaddrinfo(((ThreadArg*)args)->server->ip, port_str, NULL, &ainf);
+    
+    //struct sockaddr_in server;
+    //server.sin_family = AF_INET;
+    //server.sin_port = htons(((ThreadArg*)args)->server->port);
+    //server.sin_addr.s_addr = *((unsigned long *)hostname->h_addr);
+
+    //int sck = socket(AF_INET, SOCK_STREAM, 0);
+    int sck = socket(ainf->ai_family, ainf->ai_socktype, ainf->ai_protocol);
+    if (sck < 0) {
+        fprintf(stderr, "Socket creation failed!\n");
+        exit(1);
+    }
+
+    //if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
+    if (connect(sck, (struct sockaddr *)(ainf->ai_addr), ainf->ai_addrlen) < 0) {
+        fprintf(stderr, "Connection failed\n");
+        exit(1);
+    }
+    freeaddrinfo(ainf);
+    printf("Connected!\n");
+
+    // TODO: for one server
+    // parallel between servers
+    uint64_t begin = 1;
+    uint64_t end = k;
+
+    if (send(sck, ((ThreadArg*)args)->args, sizeof(FactArgs), 0) < 0) {
+        fprintf(stderr, "Send failed\n");
+        exit(1);
+    }
+    printf("Data sent!\n");
+    //uint64_t *response = malloc(sizeof(uint64_t));
+    u_int64_t response;// = malloc(sizeof(u_int64_t*));
+    if (recv(sck, &response, sizeof(u_int64_t), 0) < 0) {
+        fprintf(stderr, "Recieve failed\n");
+        exit(1);
+    }
+    
+    close(sck);
+    printf("Data received!\n");
+    //return (void *)response;
+    return (void *)(u_int64_t *)response;
 }
 /*typedef struct StrList StrList;
   struct StrList{
@@ -231,6 +295,8 @@ int main(int argc, char **argv) {
         to[servers_num-1].ip[255] = '\0';
     }//while(stopl != NULL);
     fclose(srv_lst);
+    //printf("created %s:%d\n", to[0].ip, to[0].port);
+    //printf("created %s:%d\n", to[1].ip, to[1].port);
     //Arguments are being set here.
 /*    struct FactArgs *fargs = malloc(sizeof(struct FactArgs) * servers_num);
     for(int i = 0; i < servers_num; ++i)
@@ -259,12 +325,16 @@ int main(int argc, char **argv) {
         {
             targs[i].args->end = tc*(i+1);
         }
-        targs[i].server = to + i;          //TODO Make it in different way!!!1
+        targs[i].server = &(to[i]);          //TODO Make it in different way!!!1
+        //printf("created %s:%d\n", targs[i].server->ip, targs[i].server->port);
+        
     }
+    //printf("created %s:%d\n", targs[0].server->ip, targs[0].server->port);
+    printf("Total\n");
     //Threads are being set here
     pthread_t *threads = malloc(sizeof(pthread_t) * servers_num);
     for (uint32_t i = 0; i < servers_num; ++i) {
-        if (pthread_create(&threads[i], NULL, ClientThread, (void *)&(targs[i]))) {
+        if (pthread_create(&threads[i], NULL, ClientThread, (void *)(targs + i))) {
             printf("Error: pthread_create failed!\n");
             return 1;
         }
@@ -272,9 +342,12 @@ int main(int argc, char **argv) {
     // TODO: work continiously, rewrite to make parallel
     uint64_t result = 1;
     for (int i = 0; i < servers_num; i++) {
-        uint64_t srf;
-        pthread_join(threads[i], (void *)&srf);
+        u_int64_t srf;
+        //printf("Tt: %d\n", sizeof(void *));
+        pthread_join(threads[i], (void *)srf);
         result = (result * srf) % mod;
+
+        //free(srf);
     }
     free(to);
     free(targs);
